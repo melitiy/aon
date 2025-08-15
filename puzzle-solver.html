@@ -1,0 +1,2169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="GAP Challenge Visual Pattern Puzzle Solver - Automatically detect and solve visual pattern puzzles">
+    <title>GAP Puzzle Solver</title>
+    
+    <style>
+        /* CSS Variables for consistent theming */
+        :root {
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --secondary-color: #64748b;
+            --success-color: #10b981;
+            --error-color: #ef4444;
+            --warning-color: #f59e0b;
+            --background-color: #f8fafc;
+            --surface-color: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            --border-radius: 8px;
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+            --transition-fast: 150ms ease;
+            --transition-normal: 300ms ease;
+        }
+
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Main container */
+        #app {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        header {
+            background-color: var(--surface-color);
+            border-bottom: 1px solid var(--border-color);
+            padding: var(--spacing-md) var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: var(--spacing-md);
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .instructions {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        /* Main content area */
+        .main-content {
+            flex: 1;
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+            padding: var(--spacing-lg);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-lg);
+        }
+
+        /* Panels */
+        .panel {
+            background-color: var(--surface-color);
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+            padding: var(--spacing-lg);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-md);
+            color: var(--text-primary);
+        }
+
+        /* Image panel */
+        #image-panel {
+            min-height: 400px;
+            position: relative;
+        }
+
+        .image-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed var(--border-color);
+            border-radius: var(--border-radius);
+            background-color: var(--background-color);
+            position: relative;
+            overflow: hidden;
+            transition: all var(--transition-normal);
+        }
+
+        .image-container.drag-over {
+            border-color: var(--primary-color);
+            background-color: rgba(37, 99, 235, 0.05);
+        }
+
+        .image-container.has-image {
+            border-style: solid;
+            background-color: var(--surface-color);
+        }
+
+        .drop-zone {
+            text-align: center;
+            padding: var(--spacing-xl);
+        }
+
+        .drop-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto var(--spacing-md);
+            opacity: 0.5;
+        }
+
+        .drop-text {
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .drop-hint {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: var(--spacing-sm);
+        }
+
+        #preview-image {
+            max-width: 100%;
+            max-height: 500px;
+            object-fit: contain;
+            display: none;
+        }
+
+        /* Grid panel */
+        #grid-panel {
+            min-height: 400px;
+        }
+
+        .grid-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .grid-size-selector {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .size-button {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border-color);
+            background-color: var(--surface-color);
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .size-button:hover {
+            background-color: var(--background-color);
+        }
+
+        .size-button.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .puzzle-grid {
+            display: grid;
+            gap: 2px;
+            padding: var(--spacing-md);
+            background-color: var(--border-color);
+            border-radius: var(--border-radius);
+        }
+
+        .grid-cell {
+            aspect-ratio: 1;
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-size: 1.5rem;
+            min-width: 60px;
+            min-height: 60px;
+        }
+
+        .grid-cell:hover {
+            background-color: var(--background-color);
+            transform: scale(1.05);
+        }
+
+        .grid-cell.filled {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .grid-cell.solved {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        /* Control panel */
+        .control-panel {
+            background-color: var(--surface-color);
+            border-top: 1px solid var(--border-color);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-md);
+        }
+
+        .controls-wrapper {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            gap: var(--spacing-md);
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-radius: var(--border-radius);
+            border: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #475569;
+        }
+
+        .btn-success {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #059669;
+        }
+
+        .btn-danger {
+            background-color: var(--error-color);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #dc2626;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Status bar */
+        .status-bar {
+            background-color: var(--surface-color);
+            border-top: 1px solid var(--border-color);
+            padding: var(--spacing-sm) var(--spacing-lg);
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .status-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-message {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--success-color);
+        }
+
+        .status-indicator.loading {
+            background-color: var(--warning-color);
+            animation: pulse 1.5s infinite;
+        }
+
+        .status-indicator.error {
+            background-color: var(--error-color);
+        }
+
+        /* Modal overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background-color: var(--surface-color);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-xl);
+            max-width: 500px;
+            width: 90%;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .modal-body {
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: var(--spacing-md);
+            justify-content: flex-end;
+        }
+
+        /* Loading indicator */
+        .loading-indicator {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .loading-indicator.active {
+            display: block;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border-color);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .loading-text {
+            margin-top: var(--spacing-md);
+            color: var(--text-secondary);
+        }
+
+        /* Progress bar */
+        .progress-bar {
+            height: 4px;
+            background-color: var(--border-color);
+            border-radius: 2px;
+            overflow: hidden;
+            margin: var(--spacing-md) 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: var(--primary-color);
+            transition: width var(--transition-normal);
+        }
+
+        /* Toast notifications */
+        .toast-container {
+            position: fixed;
+            top: var(--spacing-lg);
+            right: var(--spacing-lg);
+            z-index: 2000;
+        }
+
+        .toast {
+            background-color: var(--surface-color);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-sm);
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            min-width: 300px;
+            animation: slideIn 0.3s ease;
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--success-color);
+        }
+
+        .toast.error {
+            border-left: 4px solid var(--error-color);
+        }
+
+        .toast.warning {
+            border-left: 4px solid var(--warning-color);
+        }
+
+        .toast.info {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        /* Animations */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Utility classes */
+        .hidden {
+            display: none !important;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-small {
+            font-size: 0.875rem;
+        }
+
+        .text-muted {
+            color: var(--text-secondary);
+        }
+
+        .mt-sm { margin-top: var(--spacing-sm); }
+        .mt-md { margin-top: var(--spacing-md); }
+        .mt-lg { margin-top: var(--spacing-lg); }
+        .mb-sm { margin-bottom: var(--spacing-sm); }
+        .mb-md { margin-bottom: var(--spacing-md); }
+        .mb-lg { margin-bottom: var(--spacing-lg); }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .controls-wrapper {
+                flex-direction: column;
+                width: 100%;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .grid-cell {
+                min-width: 50px;
+                min-height: 50px;
+                font-size: 1.2rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            header, .control-panel, .status-bar {
+                display: none;
+            }
+            
+            .main-content {
+                padding: 0;
+            }
+            
+            .panel {
+                box-shadow: none;
+                border: 1px solid #000;
+                break-inside: avoid;
+            }
+        }
+
+        /* Accessibility */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        :focus {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 2px;
+        }
+
+        /* Shape icons using Unicode */
+        .shape-circle::before { content: "●"; }
+        .shape-star::before { content: "★"; }
+        .shape-cross::before { content: "+"; }
+        .shape-triangle::before { content: "▲"; }
+        .shape-square::before { content: "■"; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header>
+            <div class="header-content">
+                <h1>GAP Puzzle Solver</h1>
+                <div class="instructions">
+                    Paste (Ctrl+V), drag & drop, or upload an image to detect and solve the puzzle
+                    <div style="font-size: 0.85em; margin-top: 8px; color: #64748b;">
+                        Note: For best results, run a local server: <code style="background: #f1f5f9; padding: 2px 4px; border-radius: 3px;">python -m http.server 8000</code>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main content -->
+        <main class="main-content">
+            <!-- Image panel -->
+            <div id="image-panel" class="panel">
+                <h2 class="panel-title">Original Image</h2>
+                <div class="image-container" id="drop-zone">
+                    <div class="drop-zone" id="drop-content">
+                        <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <div class="drop-text">Drop your image here or click to browse</div>
+                        <button class="btn btn-primary" id="browse-btn">Choose File</button>
+                        <div class="drop-hint">Supports PNG, JPEG, WebP (max 25MB)</div>
+                        <div class="drop-hint mt-sm">Or paste from clipboard with Ctrl+V</div>
+                    </div>
+                    <img id="preview-image" alt="Puzzle image preview">
+                    <div class="loading-indicator" id="image-loading">
+                        <div class="spinner"></div>
+                        <div class="loading-text">Processing image...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grid panel -->
+            <div id="grid-panel" class="panel">
+                <h2 class="panel-title">Interactive Grid</h2>
+                <div class="grid-size-selector">
+                    <button class="size-button active" data-size="4">4×4 Grid</button>
+                    <button class="size-button" data-size="5">5×5 Grid</button>
+                </div>
+                <div class="grid-container">
+                    <div class="puzzle-grid" id="puzzle-grid">
+                        <!-- Grid cells will be generated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Control panel -->
+        <div class="control-panel">
+            <div class="controls-wrapper">
+                <button class="btn btn-primary" id="detect-btn">
+                    <span>Detect Shapes</span>
+                </button>
+                <button class="btn btn-success" id="solve-btn">
+                    <span>Solve Puzzle</span>
+                </button>
+                <button class="btn btn-secondary" id="clear-btn">
+                    <span>Clear Grid</span>
+                </button>
+                <button class="btn btn-danger" id="reset-btn">
+                    <span>Reset All</span>
+                </button>
+                <button class="btn btn-primary" id="export-btn">
+                    <span>Export Solution</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Status bar -->
+        <footer class="status-bar">
+            <div class="status-content">
+                <div class="status-message">
+                    <span class="status-indicator" id="status-indicator"></span>
+                    <span id="status-text">Ready</span>
+                </div>
+                <div class="progress-bar hidden" id="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Hidden file input -->
+    <input type="file" id="file-input" accept="image/png,image/jpeg,image/jpg,image/webp" class="hidden">
+
+    <!-- Modal overlay -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal">
+            <h3 class="modal-title" id="modal-title">Error</h3>
+            <div class="modal-body" id="modal-body">
+                An error occurred while processing your request.
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-primary" id="modal-close">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- OpenCV.js CDN -->
+    <script async src="https://docs.opencv.org/4.5.0/opencv.js" onload="onOpenCvReady()"></script>
+
+    <!-- Main JavaScript -->
+    <script>
+        // Main application namespace
+        const PuzzleSolverApp = {
+            // Configuration
+            config: {
+                maxFileSize: 25 * 1024 * 1024, // 25MB
+                mobileMaxFileSize: 5 * 1024 * 1024, // 5MB
+                supportedFormats: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'],
+                gridSize: 4, // Default grid size
+                debugMode: true, // Enable debug visualization
+                shapes: {
+                    0: { name: 'empty', symbol: '' },
+                    1: { name: 'circle', symbol: '●' },
+                    2: { name: 'star', symbol: '★' },
+                    3: { name: 'cross', symbol: '+' },
+                    4: { name: 'triangle', symbol: '▲' },
+                    5: { name: 'square', symbol: '■' }
+                }
+            },
+
+            // State
+            state: {
+                isOpenCvReady: false,
+                currentImage: null,
+                currentGrid: null,
+                isProcessing: false,
+                gridSize: 4
+            },
+
+            // Logging system
+            logger: {
+                levels: { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 },
+                currentLevel: 1,
+                
+                log(level, message, ...args) {
+                    if (level >= this.currentLevel) {
+                        const prefix = Object.keys(this.levels)[level];
+                        console[level === 3 ? 'error' : level === 2 ? 'warn' : 'log'](
+                            `[${prefix}]`, message, ...args
+                        );
+                    }
+                },
+                
+                debug(message, ...args) { this.log(0, message, ...args); },
+                info(message, ...args) { this.log(1, message, ...args); },
+                warn(message, ...args) { this.log(2, message, ...args); },
+                error(message, ...args) { this.log(3, message, ...args); }
+            },
+
+            // Performance monitoring
+            performance: {
+                marks: {},
+                
+                start(name) {
+                    this.marks[name] = performance.now();
+                },
+                
+                end(name) {
+                    if (this.marks[name]) {
+                        const duration = performance.now() - this.marks[name];
+                        PuzzleSolverApp.logger.debug(`Performance: ${name} took ${duration.toFixed(2)}ms`);
+                        delete this.marks[name];
+                        return duration;
+                    }
+                    return 0;
+                }
+            },
+
+            // Memory management helpers
+            memory: {
+                cleanup(obj) {
+                    if (obj && typeof obj.delete === 'function') {
+                        obj.delete();
+                        PuzzleSolverApp.logger.debug('Memory: Cleaned up OpenCV object');
+                    }
+                }
+            },
+
+            // Initialize the application
+            init() {
+                this.logger.info('Initializing Puzzle Solver App');
+                this.setupEventListeners();
+                this.initializeGrid();
+                this.updateStatus('Waiting for OpenCV.js to load...', 'loading');
+                
+                // Initialize OpenCV manager
+                opencvManager.initialize();
+            },
+
+            // Setup all event listeners
+            setupEventListeners() {
+                // File upload
+                const fileInput = document.getElementById('file-input');
+                const browseBtn = document.getElementById('browse-btn');
+                const dropZone = document.getElementById('drop-zone');
+
+                browseBtn.addEventListener('click', () => fileInput.click());
+                fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
+
+                // Drag and drop
+                dropZone.addEventListener('dragenter', (e) => this.handleDragEnter(e));
+                dropZone.addEventListener('dragover', (e) => this.handleDragOver(e));
+                dropZone.addEventListener('dragleave', (e) => this.handleDragLeave(e));
+                dropZone.addEventListener('drop', (e) => this.handleDrop(e));
+
+                // Clipboard paste
+                document.addEventListener('paste', (e) => this.handlePaste(e));
+
+                // Grid size selector
+                document.querySelectorAll('.size-button').forEach(btn => {
+                    btn.addEventListener('click', (e) => this.handleGridSizeChange(e));
+                });
+
+                // Control buttons
+                document.getElementById('detect-btn').addEventListener('click', () => this.detectShapes());
+                document.getElementById('solve-btn').addEventListener('click', () => this.solvePuzzle());
+                document.getElementById('clear-btn').addEventListener('click', () => this.clearGrid());
+                document.getElementById('reset-btn').addEventListener('click', () => this.resetAll());
+                document.getElementById('export-btn').addEventListener('click', () => this.exportSolution());
+
+                // Modal
+                document.getElementById('modal-close').addEventListener('click', () => this.closeModal());
+                document.getElementById('modal-overlay').addEventListener('click', (e) => {
+                    if (e.target === e.currentTarget) this.closeModal();
+                });
+
+                // Grid cells (delegated)
+                document.getElementById('puzzle-grid').addEventListener('click', (e) => {
+                    if (e.target.classList.contains('grid-cell')) {
+                        this.handleCellClick(e.target);
+                    }
+                });
+
+                document.getElementById('puzzle-grid').addEventListener('contextmenu', (e) => {
+                    if (e.target.classList.contains('grid-cell')) {
+                        e.preventDefault();
+                        this.handleCellRightClick(e.target);
+                    }
+                });
+            },
+
+            // Initialize the grid
+            initializeGrid() {
+                const grid = document.getElementById('puzzle-grid');
+                const size = this.state.gridSize;
+                
+                grid.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+                grid.innerHTML = '';
+                
+                this.state.currentGrid = Array(size).fill(null).map(() => Array(size).fill(0));
+                
+                for (let i = 0; i < size * size; i++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+                    cell.dataset.row = Math.floor(i / size);
+                    cell.dataset.col = i % size;
+                    cell.dataset.value = '0';
+                    grid.appendChild(cell);
+                }
+            },
+
+            // Handle grid size change
+            handleGridSizeChange(e) {
+                const btn = e.target;
+                const size = parseInt(btn.dataset.size);
+                
+                document.querySelectorAll('.size-button').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                this.state.gridSize = size;
+                this.initializeGrid();
+                this.showToast('Grid size changed to ' + size + '×' + size, 'info');
+            },
+
+            // Handle cell click
+            handleCellClick(cell) {
+                const value = parseInt(cell.dataset.value);
+                const newValue = (value + 1) % 6;
+                this.updateCell(cell, newValue);
+            },
+
+            // Handle cell right-click
+            handleCellRightClick(cell) {
+                this.updateCell(cell, 0);
+            },
+
+            // Update cell value
+            updateCell(cell, value) {
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                
+                cell.dataset.value = value;
+                cell.textContent = this.config.shapes[value].symbol;
+                cell.className = value === 0 ? 'grid-cell' : 'grid-cell filled';
+                
+                if (this.state.currentGrid) {
+                    this.state.currentGrid[row][col] = value;
+                }
+            },
+
+            // Clear grid
+            clearGrid() {
+                document.querySelectorAll('.grid-cell').forEach(cell => {
+                    this.updateCell(cell, 0);
+                });
+                this.showToast('Grid cleared', 'info');
+            },
+
+            // Reset everything
+            resetAll() {
+                this.clearGrid();
+                this.clearImage();
+                this.state.currentImage = null;
+                this.updateStatus('Ready');
+                this.showToast('Application reset', 'info');
+            },
+
+            // Clear image preview
+            clearImage() {
+                const preview = document.getElementById('preview-image');
+                const dropContent = document.getElementById('drop-content');
+                const dropZone = document.getElementById('drop-zone');
+                
+                preview.style.display = 'none';
+                preview.src = '';
+                dropContent.style.display = 'block';
+                dropZone.classList.remove('has-image');
+            },
+
+            // Solve puzzle (placeholder)
+            solvePuzzle() {
+                if (!this.state.currentGrid) {
+                    this.showModal('No Puzzle', 'Please load an image or manually enter a puzzle first.');
+                    return;
+                }
+                this.showToast('Solver not yet implemented', 'warning');
+            },
+
+            // Export solution (placeholder)
+            exportSolution() {
+                this.showToast('Export not yet implemented', 'warning');
+            },
+
+            // Update status bar
+            updateStatus(message, type = 'normal') {
+                const indicator = document.getElementById('status-indicator');
+                const text = document.getElementById('status-text');
+                
+                text.textContent = message;
+                indicator.className = 'status-indicator';
+                
+                if (type === 'loading') {
+                    indicator.classList.add('loading');
+                } else if (type === 'error') {
+                    indicator.classList.add('error');
+                }
+            },
+
+            // Show modal
+            showModal(title, message) {
+                document.getElementById('modal-title').textContent = title;
+                document.getElementById('modal-body').textContent = message;
+                document.getElementById('modal-overlay').classList.add('active');
+            },
+
+            // Close modal
+            closeModal() {
+                document.getElementById('modal-overlay').classList.remove('active');
+            },
+
+            // Show toast notification
+            showToast(message, type = 'info', duration = 3000) {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.textContent = message;
+                
+                container.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    setTimeout(() => toast.remove(), 300);
+                }, duration);
+            },
+
+            // Error handling wrapper
+            handleError(error, context = '') {
+                this.logger.error(`Error in ${context}:`, error);
+                this.updateStatus('Error occurred', 'error');
+                this.showModal('Error', error.message || 'An unexpected error occurred');
+            }
+        };
+
+        // File Upload Handler class
+        class FileUploadHandler {
+            constructor() {
+                this.maxSize = PuzzleSolverApp.config.maxFileSize;
+                this.supportedFormats = PuzzleSolverApp.config.supportedFormats;
+            }
+
+            validateFile(file) {
+                // Check file type
+                if (!this.supportedFormats.includes(file.type)) {
+                    throw new Error('Unsupported file format. Please use PNG, JPEG, or WebP.');
+                }
+
+                // Check file size
+                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                const maxSize = isMobile ? PuzzleSolverApp.config.mobileMaxFileSize : this.maxSize;
+                
+                if (file.size > maxSize) {
+                    const sizeMB = (maxSize / (1024 * 1024)).toFixed(0);
+                    throw new Error(`File size exceeds ${sizeMB}MB limit.`);
+                }
+
+                return true;
+            }
+
+            async readFile(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.onerror = () => reject(new Error('Failed to read file'));
+                    reader.onprogress = (e) => {
+                        if (e.lengthComputable) {
+                            const progress = (e.loaded / e.total) * 100;
+                            this.updateProgress(progress);
+                        }
+                    };
+                    
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            updateProgress(percent) {
+                const progressBar = document.getElementById('progress-bar');
+                const progressFill = document.getElementById('progress-fill');
+                
+                if (percent > 0 && percent < 100) {
+                    progressBar.classList.remove('hidden');
+                    progressFill.style.width = `${percent}%`;
+                } else {
+                    progressBar.classList.add('hidden');
+                }
+            }
+
+            async processFile(file) {
+                try {
+                    this.validateFile(file);
+                    const dataUrl = await this.readFile(file);
+                    await this.displayImage(dataUrl);
+                    
+                    // Check if we need optimization
+                    if (file.size > 5 * 1024 * 1024) {
+                        PuzzleSolverApp.showToast('Large image detected, optimizing...', 'info');
+                        const optimized = await largeImageHandler.optimize(file);
+                        PuzzleSolverApp.state.currentImage = optimized;
+                    } else {
+                        PuzzleSolverApp.state.currentImage = dataUrl;
+                    }
+                    
+                    PuzzleSolverApp.showToast('Image loaded successfully', 'success');
+                    PuzzleSolverApp.updateStatus('Image loaded');
+                } catch (error) {
+                    PuzzleSolverApp.handleError(error, 'FileUploadHandler.processFile');
+                }
+            }
+
+            async displayImage(dataUrl) {
+                const preview = document.getElementById('preview-image');
+                const dropContent = document.getElementById('drop-content');
+                const dropZone = document.getElementById('drop-zone');
+                const loading = document.getElementById('image-loading');
+                
+                loading.classList.add('active');
+                
+                return new Promise((resolve, reject) => {
+                    preview.onload = () => {
+                        dropContent.style.display = 'none';
+                        preview.style.display = 'block';
+                        dropZone.classList.add('has-image');
+                        loading.classList.remove('active');
+                        resolve();
+                    };
+                    
+                    preview.onerror = () => {
+                        loading.classList.remove('active');
+                        reject(new Error('Failed to load image'));
+                    };
+                    
+                    preview.src = dataUrl;
+                });
+            }
+        }
+
+        // Drag & Drop Handler class
+        class DragDropHandler {
+            constructor() {
+                this.dragCounter = 0;
+            }
+
+            handleDragEnter(e) {
+                e.preventDefault();
+                this.dragCounter++;
+                const dropZone = document.getElementById('drop-zone');
+                dropZone.classList.add('drag-over');
+            }
+
+            handleDragOver(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+            }
+
+            handleDragLeave(e) {
+                this.dragCounter--;
+                if (this.dragCounter === 0) {
+                    const dropZone = document.getElementById('drop-zone');
+                    dropZone.classList.remove('drag-over');
+                }
+            }
+
+            async handleDrop(e) {
+                e.preventDefault();
+                this.dragCounter = 0;
+                
+                const dropZone = document.getElementById('drop-zone');
+                dropZone.classList.remove('drag-over');
+                
+                const files = Array.from(e.dataTransfer.files);
+                
+                if (files.length === 0) {
+                    PuzzleSolverApp.showToast('No files detected', 'warning');
+                    return;
+                }
+                
+                if (files.length > 1) {
+                    PuzzleSolverApp.showToast('Please drop only one image', 'warning');
+                    return;
+                }
+                
+                const file = files[0];
+                if (!file.type.startsWith('image/')) {
+                    PuzzleSolverApp.showToast('Please drop an image file', 'warning');
+                    return;
+                }
+                
+                await fileUploadHandler.processFile(file);
+            }
+        }
+
+        // Clipboard Handler class
+        class ClipboardHandler {
+            async handlePaste(e) {
+                const items = e.clipboardData?.items;
+                
+                if (!items) {
+                    PuzzleSolverApp.logger.debug('No clipboard items found');
+                    return;
+                }
+                
+                for (let item of items) {
+                    if (item.type.startsWith('image/')) {
+                        e.preventDefault();
+                        const blob = item.getAsFile();
+                        
+                        if (blob) {
+                            PuzzleSolverApp.showToast('Processing pasted image...', 'info');
+                            await fileUploadHandler.processFile(blob);
+                        }
+                        return;
+                    }
+                }
+                
+                PuzzleSolverApp.logger.debug('No image found in clipboard');
+            }
+        }
+
+        // Large Image Handler class
+        class LargeImageHandler {
+            constructor() {
+                this.sizeThresholds = {
+                    small: 5 * 1024 * 1024,    // 5MB
+                    medium: 10 * 1024 * 1024,  // 10MB
+                    large: 20 * 1024 * 1024    // 20MB
+                };
+                
+                this.dimensionLimits = {
+                    small: 2000,
+                    medium: 1500,
+                    large: 1000
+                };
+            }
+
+            async optimize(file) {
+                PuzzleSolverApp.performance.start('imageOptimization');
+                
+                try {
+                    const size = file.size;
+                    let maxDimension;
+                    
+                    if (size < this.sizeThresholds.small) {
+                        return URL.createObjectURL(file);
+                    } else if (size < this.sizeThresholds.medium) {
+                        maxDimension = this.dimensionLimits.small;
+                    } else if (size < this.sizeThresholds.large) {
+                        maxDimension = this.dimensionLimits.medium;
+                    } else {
+                        maxDimension = this.dimensionLimits.large;
+                    }
+                    
+                    const optimized = await this.resizeImage(file, maxDimension);
+                    PuzzleSolverApp.performance.end('imageOptimization');
+                    
+                    return optimized;
+                } catch (error) {
+                    PuzzleSolverApp.performance.end('imageOptimization');
+                    throw error;
+                }
+            }
+
+            async resizeImage(file, maxDimension) {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        // Calculate new dimensions
+                        let { width, height } = img;
+                        const scale = Math.min(maxDimension / width, maxDimension / height, 1);
+                        
+                        width *= scale;
+                        height *= scale;
+                        
+                        canvas.width = width;
+                        canvas.height = height;
+                        
+                        // Draw resized image
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        // Convert to blob
+                        canvas.toBlob((blob) => {
+                            if (blob) {
+                                resolve(URL.createObjectURL(blob));
+                            } else {
+                                reject(new Error('Failed to optimize image'));
+                            }
+                            
+                            // Cleanup
+                            canvas.remove();
+                            URL.revokeObjectURL(img.src);
+                        }, file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.9);
+                    };
+                    
+                    img.onerror = () => reject(new Error('Failed to load image for optimization'));
+                    img.src = URL.createObjectURL(file);
+                });
+            }
+
+            calculateQuality(fileSize) {
+                if (fileSize < 10 * 1024 * 1024) return 0.9;
+                if (fileSize < 15 * 1024 * 1024) return 0.8;
+                if (fileSize < 20 * 1024 * 1024) return 0.7;
+                return 0.6;
+            }
+        }
+
+        // OpenCVManager class - Phase 3.1.0
+        class OpenCVManager {
+            constructor() {
+                this.isReady = false;
+                this.loadTimeout = null;
+                this.retryCount = 0;
+                this.maxRetries = 3;
+                this.fallbackCDNs = [
+                    'https://docs.opencv.org/4.5.0/opencv.js',
+                    'https://cdn.jsdelivr.net/npm/opencv.js@4.5.0/opencv.js',
+                    'https://unpkg.com/opencv.js@4.5.0/opencv.js'
+                ];
+                this.currentCDNIndex = 0;
+            }
+
+            async initialize() {
+                PuzzleSolverApp.logger.info('Initializing OpenCV.js');
+                
+                // Check if already loaded
+                if (typeof cv !== 'undefined' && cv.Mat) {
+                    this.onReady();
+                    return;
+                }
+
+                // Set timeout for load failure
+                this.loadTimeout = setTimeout(() => {
+                    this.handleLoadFailure();
+                }, 30000); // 30 second timeout
+            }
+
+            onReady() {
+                clearTimeout(this.loadTimeout);
+                this.isReady = true;
+                PuzzleSolverApp.state.isOpenCvReady = true;
+                
+                // Cache status
+                sessionStorage.setItem('opencvReady', 'true');
+                sessionStorage.setItem('opencvVersion', this.getVersion());
+                
+                PuzzleSolverApp.logger.info('OpenCV.js initialized successfully');
+                PuzzleSolverApp.updateStatus('Ready');
+                PuzzleSolverApp.showToast('OpenCV.js loaded successfully', 'success');
+                
+                // Initialize template loader
+                templateLoader.initialize();
+            }
+
+            handleLoadFailure() {
+                PuzzleSolverApp.logger.warn('OpenCV.js load timeout, attempting retry');
+                
+                if (this.retryCount < this.maxRetries) {
+                    this.retryCount++;
+                    this.loadAlternativeCDN();
+                } else {
+                    PuzzleSolverApp.handleError(
+                        new Error('Failed to load OpenCV.js after multiple attempts'),
+                        'OpenCVManager'
+                    );
+                }
+            }
+
+            loadAlternativeCDN() {
+                this.currentCDNIndex = (this.currentCDNIndex + 1) % this.fallbackCDNs.length;
+                const alternativeUrl = this.fallbackCDNs[this.currentCDNIndex];
+                
+                PuzzleSolverApp.logger.info(`Trying alternative CDN: ${alternativeUrl}`);
+                PuzzleSolverApp.showToast('Retrying OpenCV.js load...', 'info');
+                
+                // Remove existing script
+                const existingScript = document.querySelector('script[src*="opencv.js"]');
+                if (existingScript) {
+                    existingScript.remove();
+                }
+                
+                // Add new script
+                const script = document.createElement('script');
+                script.src = alternativeUrl;
+                script.async = true;
+                script.onload = () => this.onReady();
+                script.onerror = () => this.handleLoadFailure();
+                document.head.appendChild(script);
+            }
+
+            getVersion() {
+                if (typeof cv !== 'undefined' && cv.getBuildInformation) {
+                    try {
+                        return cv.getBuildInformation();
+                    } catch (e) {
+                        return '4.5.0';
+                    }
+                }
+                return 'unknown';
+            }
+
+            checkReady() {
+                return this.isReady && typeof cv !== 'undefined';
+            }
+        }
+
+        // TemplateLoader class - Phase 3.2.0 (Priority)
+        class TemplateLoader {
+            constructor() {
+                this.templates = {};
+                this.scaledTemplates = {};
+                this.templatePaths = {
+                    circle: 'templates/circle.png',
+                    star: 'templates/star.png',
+                    cross: 'templates/cross.png',
+                    triangle: 'templates/triangle.png',
+                    square: 'templates/square.png'
+                };
+                // Base64 fallback templates for CORS issues
+                this.base64Templates = {
+                    circle: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDcuMS1jMDAwIDc5LmVkYTJiM2ZhYywgMjAyMS8xMS8xNy0xNzoyMzoxOSAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIDIwMjIgTWFjaW50b3NoIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjlDODIzMDgzNzBGNjExRjBBNEJFRUM1NDEyNDdGOUQxIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjlDODIzMDg0NzBGNjExRjBBNEJFRUM1NDEyNDdGOUQxIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6OUM4MjMwODE3MEY2MTFGMEE0QkVFQzU0MTI0N0Y5RDEiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6OUM4MjMwODI3MEY2MTFGMEE0QkVFQzU0MTI0N0Y5RDEiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz6+/PHYAAAF70lEQVR42uybXWxTZRjH/+f0lK3runWsncA22ES2ycbEYCADJcCIGEc0GAwG0AsMxAuNMV4ZLyR+XBluIARMxOAtahT5xjiniciMLGPLOgjKNjZG142tn1u7fhyf593GDRq37pz2xPY52Zot7Tnv+Z3n+3krqap6F4ANmSkBiQCoyGCRmUIG339ARoZLFkAWQBZAFkAWQCaLko6LJtQ4wpMBxGJR+kuFyWRGrtlKrwv+nwAmIj4MDLtwZ6iTXrvhDQ7R//yIxiICgGLKgWVBPgqsTixxVGPZI/UoLVmJgjyn7mvjVNivVy3Q576OazfPwNX3C8b89zAZC8MkKzAruXTTZkiSSbxPVROIJ6IEJIx4PCo0otBagqrydXiq5kV6Xa9rLaA5gIHhLlz+/Ri6elrETeflFoknLMumWZpIApHJEEITo5DoM1Vl6/Ds2jewoqzB+ADOXjmEn9pOihsvsi2mp52DZOstSZIQI41gk1HVGBpqd+Klje8jh2AaDoA3OIiT59/BjTtXUFxYjlxaJKu2JnYqyQLoiLcPZc4avPbcIZSX1BkHAKv88dP7CYIHJfYK8eS0rrIlOujEuO8bID9iwr6mw6it3Jz+avDuSDcOf72X7NWHRUXLp52a9i0GlQ/SKIe9nHyJgs9OHyAf05zeRMgf8uDYt/vIe0+S2peJ+K57DpGIozC/RPiBz8++iX5PZ/oAfHHuLfiCwyguKBMLS1kiNQ2BFe0ErYGTqpQDuNh6BN19v8JZVJGSJ/9PEBykdUOjPfiq+WBqAXjGbuMSxXmHfalweOmSBKkAO93W7u/g6m1JHYDzVw9TfJ6cDnXp7KmqIs9QqIa41Ho0NQDco7fQ8ecPsNuWaBbn56cFCZFw9bjb0fHXZf0B/NZ1ipKSCBYQecPU9LIiMoWrrm/0BRCJjlPs/Rn5liIYaZzAmmjLc2DA44Iv5NYPwICni6q6QWH7RpMcswXegBudt3/UD0Av2RnX8LOt6lIpEt0K62TvvXYdNWDYNW1vxhNOlXPMeVSP6GQCbGc+Kku5mWFUUcgxBye8mJhDZjhrAJxujkf8opNjVDFJCjnqIMIRv/YA2Pb5Z6aNZUSRZFk0WjlJ094EHvwyvswlQs8agJnSTUUxGyL7+/cb5xa7MicznTUAjv2WHJvo3hpVEokYRQLrnPKUWQPg8Md9em5dG1Vi8QisuYXIy7Xrkwfw0IL79oZ0gHREohNinqBbIlS5+EkxtEgY0A+IniGZwFy7xXMCwCfnVhQPLYwmbJoFVgfqH9uqHwC2reryBsq2RtPaCXpI/WktgfH7wkQdhRX69gPW1+16MLExUvhjB7imerv+DZFli1ajZukGUXryxCb9T18Wo7NSZw3WrdypPwCWpoa3EVenprliYpPm2M+5f+Oa/Uk9kKQAsBZsfGIPhr29YlyVLuG+hIfWsGr5Fqx9fEdy50j24jueeQ+l5HR4VpeOBglf0xsYQj455l1bPkz+PMl+0KxYsK/pCEyyBF/Qk1IIMlWkIar7xyNevLrtUywsKE89gKnMsAavbz8qavBUQeBrhMJejAUHsXvrx6h7tHF+55vvglZWbMKBF45TkTSJEV//tCOSdFV7Hsru3voJnq7fO/8ootUGid57bfjy4rtiVue0LxPtKS03SMTJ2w97+2Cz2PFK40dYveJ5LU6t7RYZtslTzR+g7eY5elpm2G2LxWaG+WyR4c+yeXFLrrZyI17efJAAV2qlVPpskmq/dQHNbSfQ5+6gEkWCLa9Y9O2nLO6/YEjiPZxjBMZHRYZX6qwWYXfDqj1aW1VA121y125+jz9unMHdkRuiXa2qkgDB5sHb5WYSFzYVHnfzzXJJq6pxAW1JcRWp+jY0UPptknVpxuoLYEbu+/vh6mlBr/u6SFtD4TGqKMcRI8fJCsFtLO7pc7FVaHVS1VlL6r4JixZW6R1UUgPgIV9BYSwcDU11bwmAIgBYYbUU6RZBDAXAQJL9zlAWQBZAFkAWQBZAJkvGf3ma97sMZnIi9LcAAwB5T5/gm7oyIQAAAABJRU5ErkJggg==',
+                    star: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDcuMS1jMDAwIDc5LmVkYTJiM2ZhYywgMjAyMS8xMS8xNy0xNzoyMzoxOSAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIDIwMjIgTWFjaW50b3NoIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjY0MjlFM0Y2NzBGNjExRjBBNEJFRUM1NDEyNDdGOUQxIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjY0MjlFM0Y3NzBGNjExRjBBNEJFRUM1NDEyNDdGOUQxIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6NjQyOUUzRjQ3MEY2MTFGMEE0QkVFQzU0MTI0N0Y5RDEiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6NjQyOUUzRjU3MEY2MTFGMEE0QkVFQzU0MTI0N0Y5RDEiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz5iWKdvAAAHtUlEQVR42uxb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',
+                    cross: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDcuMS1jMDAwIDc5LmVkYTJiM2ZhYywgMjAyMS8xMS8xNy0xNzoyMzoxOSAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIDIwMjIgTWFjaW50b3NoIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjlDODIzMDdCNzBGNjExRjBBNEJFRUM1NDEyNDdGOUQxIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjlDODIzMDdDNzBGNjExRjBBNEJFRUM1NDEyNDdGOUQxIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6NjQyOUUzRjg3MEY2MTFGMEE0QkVFQzU0MTI0N0Y5RDEiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6OUM4MjMwN0E3MEY2MTFGMEE0QkVFQzU0MTI0N0Y5RDEiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz5ZuFajAAACaElEQVR42uybz27TQBDGv43/1S40DW0lkCgSB1Q4wDNU4kKlvg63vgeXvgASF3gBJDgiJJA4I5BIE05tYood/1l3xyrHpGSrlRr5m6s1tue33t1vZseqaZohgNvopqXKAGjQYesJhQ7Hn/bQcSMAAiAAAiAAAiCA7prv8ubTrMJZViLwlJV/VTdIIg9b6+FqAnj7dYTjDz+wO0is/MfTHPt72zg63FtNAI0GajOKtbbLt8RP62Z1p4BvPv049LAW2C01ceAh9N0uU9wFCIAACIAACMCRrUc+ytp+H6+MBnC9DS6tA0TevvsygugTf47EVZca4Nswxc4texk7SAL8Os3w+tPQPK/BvPq1XCsqjYOnd3GvH7kFMDHa/vjjz1anx+Hi0dk0AQyMji9rbQVgY83HeDJr5fRVOUM6K/Fsd9M9ABnZ+4O4lan/o/Bsg/83BSIzBeR5VwE4LwIrxclFkAAIgAAIgAAIgAAIgAAIgAA6aUtng5KhSYpaa93W/OeZ5O4bsd+mtJXl4YbXU8iKGqd/y8UZZ9XgT1G2NQHnABIT9P7jLZj4Efrzz/yUUvg9zVtYkWVVJzfB95PA5Pl9LOrmE8B5qdsCyrImfYJTOGqUfPP5BK/ef8eDO3Zng6NJjudPdvDyxSNXM8Btm5wUKuRLsDXx1Y77OJ0CkJdX1/BXl2sJdwECIAACIICbogSX3QXkXKCyPB4rr9FecyMAzIw0TfMK50Vlp1KMb1bWTgE4VYJjo+SGZzmiwLPyF20v8vbhduIq/tQpgBUw/jFCAARAAARAAARAAN21zv88LcnQSZel8IUAAwDpBfKuXWJ3nwAAAABJRU5ErkJggg==',
+                    triangle: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDcuMS1jMDAwIDc5LmVkYTJiM2ZhYywgMjAyMS8xMS8xNy0xNzoyMzoxOSAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIDIwMjIgTWFjaW50b3NoIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjY0MjlFM0VFNzBGNjExRjBBNEJFRUM1NDEyNDdGOUQxIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjY0MjlFM0VGNzBGNjExRjBBNEJFRUM1NDEyNDdGOUQxIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6RDUzNzdDRkY3MEY0MTFGMEE0QkVFQzU0MTI0N0Y5RDEiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6RDUzNzdEMDA3MEY0MTFGMEE0QkVFQzU0MTI0N0Y5RDEiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz5eQbLvAAAEwElEQVR42uyb+0+bVRjHv73fL1BKocrQxZjoz/qfmP0J/uSP/uIEt0myLIuZG4VsY3PTzTHjAs4EZmYvQGGrymVc5NKJ7WQtl5VRoGtrYX3rOYeQLGrasrV9277v8xtJQ99+znO+z/c8z3skmUwmDMAAYUZMQgBkIOCQUgoC/v0xKQQeIgARgAhABCACEAGIAEQAvMTCowgerWwKF8CRj7/DJ2fv8gpAztcX9w/7MTMbRmh1C3OBCN49bBVOBnBcBi0dLtgaTEjtpNHa4RTWFmi/6cOMfxX1tXo0N5pwx+tnGSEIAE824jh9xYvX6o3sb4VCBo1Kgc8vDAgDwIkLHmxsJmE2qkF7MXQ7vG4zYpzowbkbvuoGMDG/jK9vT6DZbkaGe6ERJZGgwaLH2ev3sL6ZqF4AnzqckMskUKvkeLEPRzPBUqNFaG0Lx8+7qxNAj2sWzvuLaCLKz3H/bUNSCM2NZtzon8ID/0p1AUjtpnGs04U6ssoy6f9/JW3N6rVK7Ow8R6vDWV0AzlwbwUJwnZU9LksTOk0yo9leA6dvET3u2eoA8Jjs6zPX7qHJZsrr8wq5FAadCm2kLKa5TOUDONbpxrN4CkaDCvmMIKg+2K1G/P7HGr74ZriyAdyfWsLNn6ZZ2eMOuJp2qwEO4guWI7HKBXD03M9QK2VQKQ925qKZUmvSMNf4GRHPigRwvW8SIxN/EctrOvDq72+FN4ggfn93Br7ppcoCkPh7F20XB4jq6yCVSl7qf1BkWrWcOcbWDndlATh1ZQjBUBTWGh1eZfa6VxbN8I4F8S0xSBUB4M/QBjq6f8Eh4vgyePUyJpNJUUMOTqe+GkQytVv+AFqIi0sRN6fXKVGIwTvVggaLAQuBdQLBW94APKMB9BLPf6jR/FLCl00P6JH54q1RBMPR8gVAV5/6eaVCVtCHpDpiNqgR3U4SQXSVJ4CunlH8Oh1iLo4rgoWlgvgmEcTbnjkMjgbLC0A0lsTJrkHY6/SQSCQoVqhUcnKalBTUHBUEwMlLQ8yy1pq0KOYrRzSzqL74ph7jcu9YeQCYCzwh4vQba2YUouzlfGCSYXVmLU5fHUYskeIfABW+DEdcm0aBUrxvRvsJ9RYdMVobaOsa4BfAnRE/+ob8JC1NRRG+bFWBttau9o6z+SIvAOhKtDhcMOnVkMtL212nmWbUqRBP7rIM5AWAo9uHaf8qGsm5vZSr/+9zQr/XTzLxYWkBRKJxJkL70x2+ghoutZJOlTylBUCnO0+jCebO+HzTdm+qZMLYbBjt3b7SAHiwsDfdocJXirKXK6jvstXq8SWdKm0lig/gaLuTuTGNujRlL5+KQOcN9D2DE+c9xQVAe/Uu3yJrcfMhfNkgsKlS3yQmH64UB8DO8zSOd7phIXaXNinKKfanSik2VXIVBwAdbswHIsSFZZ/u8BWsLJIsoBnaS06MeWsISZ9t5LgxMj4XxntHOqHRKJkBKdc7FrQBu7q2zV69mbr1EWxksXJELK+G/Q+E6NuHrXiryUL2PodyvWLCDuLv2LG49BQ/Dszjww/eL0wGxOIpNq+rlKAL9IycFA3anM8cywtAFYd4ZUYEIAIQAYgARAAiAAGH4C9P07PAspCd4D8CDACJFBEjLjqw1AAAAABJRU5ErkJggg==',
+                    square: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDcuMS1jMDAwIDc5LmVkYTJiM2ZhYywgMjAyMS8xMS8xNy0xNzoyMzoxOSAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIDIwMjIgTWFjaW50b3NoIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjY0MjlFM0YyNzBGNjExRjBBNEJFRUM1NDEyNDdGOUQxIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjY0MjlFM0YzNzBGNjExRjBBNEJFRUM1NDEyNDdGOUQxIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6NjQyOUUzRjA3MEY2MTFGMEE0QkVFQzU0MTI0N0Y5RDEiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6NjQyOUUzRjE3MEY2MTFGMEE0QkVFQzU0MTI0N0Y5RDEiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz6OpMC3AAABTklEQVR42uzbPU7DMBjG8cdJkJpK7cKAuAELCyzcgitwLE7AXVgZuEHL3KZSq/gLO2xsGYIs/H+kjFHsn95EsfS+Jsa4k7RRnRlMAoiqOE1WqHj/Q6PKAwAAAAAAAAAA1Jtu7g3BWZ2/0vEh/UEbU4pfVAxBq5tbtat+WYDLfqf3l2dF59Wu+zK2P1rZ01GPr2+6fnhaFmB6oHfp8hNCEQDTetxUlYu/Aqnu1fbrnwroC6mArlNIAKZp+QgCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/M78DpEYFa2dOkRyZ0YJyesJdvybFpncjTUOxwTg1HlbBkBukhoOCmlNc5MnRo6aMTLjL2cdPj+UB01MU8gblKvSO23v7nW12c65c5gN8M/CxAgAAAAAAAAAAFBvqh+ezoehfc2/wt8CDAAAhoCIUjA5cwAAAABJRU5ErkJggg=='
+                };
+                this.scales = [0.8, 1.0, 1.2];
+                this.isLoaded = false;
+                this.useFallback = false;
+            }
+
+            async initialize() {
+                if (!opencvManager.checkReady()) {
+                    PuzzleSolverApp.logger.error('OpenCV not ready for template loading');
+                    return;
+                }
+
+                // Wait a bit for OpenCV runtime to be fully ready
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // Double-check that cv.Mat is available
+                if (typeof cv === 'undefined' || !cv.Mat) {
+                    PuzzleSolverApp.logger.error('OpenCV runtime not fully loaded');
+                    setTimeout(() => this.initialize(), 500);
+                    return;
+                }
+
+                PuzzleSolverApp.logger.info('Loading shape templates');
+                PuzzleSolverApp.updateStatus('Loading templates...', 'loading');
+                
+                try {
+                    await this.loadAllTemplates();
+                    this.generateScaledVersions();
+                    this.isLoaded = true;
+                    
+                    PuzzleSolverApp.logger.info('All templates loaded successfully');
+                    PuzzleSolverApp.showToast('Templates loaded', 'success');
+                    PuzzleSolverApp.updateStatus('Ready');
+                } catch (error) {
+                    PuzzleSolverApp.handleError(error, 'TemplateLoader.initialize');
+                }
+            }
+
+            async loadAllTemplates() {
+                // Check if running from file:// protocol
+                const isFileProtocol = window.location.protocol === 'file:';
+                
+                if (isFileProtocol) {
+                    PuzzleSolverApp.logger.info('Running from file://, using base64 templates');
+                    this.useFallback = true;
+                    
+                    const loadPromises = Object.keys(this.templatePaths).map(name => 
+                        this.loadBase64Template(name)
+                    );
+                    await Promise.all(loadPromises);
+                } else {
+                    const loadPromises = Object.entries(this.templatePaths).map(([name, path]) => 
+                        this.loadTemplate(name, path)
+                    );
+                    await Promise.all(loadPromises);
+                }
+            }
+
+            async loadTemplate(name, path) {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    
+                    img.onload = () => {
+                        try {
+                            // Validate dimensions
+                            if (img.width !== 64 || img.height !== 64) {
+                                throw new Error(`Template ${name} must be 64x64 pixels, got ${img.width}x${img.height}`);
+                            }
+                            
+                            // Create canvas and convert to grayscale Mat
+                            const canvas = document.createElement('canvas');
+                            canvas.width = 64;
+                            canvas.height = 64;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0);
+                            
+                            // Convert to OpenCV Mat
+                            const mat = cv.imread(canvas);
+                            const grayMat = new cv.Mat();
+                            cv.cvtColor(mat, grayMat, cv.COLOR_RGBA2GRAY);
+                            
+                            // Store template
+                            this.templates[name] = grayMat;
+                            
+                            // Cleanup
+                            mat.delete();
+                            canvas.remove();
+                            
+                            PuzzleSolverApp.logger.debug(`Loaded template: ${name}`);
+                            resolve();
+                        } catch (error) {
+                            reject(new Error(`Failed to process template ${name}: ${error.message}`));
+                        }
+                    };
+                    
+                    img.onerror = () => {
+                        // Fallback to base64 template
+                        PuzzleSolverApp.logger.warn(`Failed to load template ${name} from file, using base64 fallback`);
+                        this.useFallback = true;
+                        this.loadBase64Template(name).then(resolve).catch(reject);
+                    };
+                    
+                    img.src = path + '?t=' + Date.now();
+                });
+            }
+
+            async loadBase64Template(name) {
+                return new Promise((resolve, reject) => {
+                    if (!this.base64Templates[name]) {
+                        reject(new Error(`No base64 fallback available for template ${name}`));
+                        return;
+                    }
+
+                    const img = new Image();
+                    
+                    img.onload = () => {
+                        try {
+                            // Create canvas and convert to grayscale Mat
+                            const canvas = document.createElement('canvas');
+                            canvas.width = 64;
+                            canvas.height = 64;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0);
+                            
+                            // Convert to OpenCV Mat
+                            const mat = cv.imread(canvas);
+                            const grayMat = new cv.Mat();
+                            cv.cvtColor(mat, grayMat, cv.COLOR_RGBA2GRAY);
+                            
+                            // Store template
+                            this.templates[name] = grayMat;
+                            
+                            // Cleanup
+                            mat.delete();
+                            canvas.remove();
+                            
+                            PuzzleSolverApp.logger.debug(`Loaded template ${name} from base64`);
+                            resolve();
+                        } catch (error) {
+                            reject(new Error(`Failed to process base64 template ${name}: ${error.message}`));
+                        }
+                    };
+                    
+                    img.onerror = () => {
+                        reject(new Error(`Failed to load base64 template ${name}`));
+                    };
+                    
+                    img.src = this.base64Templates[name];
+                });
+            }
+
+            generateScaledVersions() {
+                Object.entries(this.templates).forEach(([name, template]) => {
+                    this.scaledTemplates[name] = {};
+                    
+                    this.scales.forEach(scale => {
+                        const scaledSize = Math.round(64 * scale);
+                        const scaled = new cv.Mat();
+                        const dsize = new cv.Size(scaledSize, scaledSize);
+                        
+                        cv.resize(template, scaled, dsize, 0, 0, cv.INTER_LINEAR);
+                        this.scaledTemplates[name][scale] = scaled;
+                        
+                        PuzzleSolverApp.logger.debug(`Generated ${scale}x scale for ${name}`);
+                    });
+                });
+            }
+
+            getTemplate(shapeName, scale = 1.0) {
+                if (!this.isLoaded) {
+                    throw new Error('Templates not loaded');
+                }
+                
+                if (this.scaledTemplates[shapeName] && this.scaledTemplates[shapeName][scale]) {
+                    return this.scaledTemplates[shapeName][scale];
+                }
+                
+                return this.templates[shapeName];
+            }
+
+            cleanup() {
+                // Clean up all Mat objects
+                Object.values(this.templates).forEach(mat => {
+                    if (mat && !mat.isDeleted()) mat.delete();
+                });
+                
+                Object.values(this.scaledTemplates).forEach(scales => {
+                    Object.values(scales).forEach(mat => {
+                        if (mat && !mat.isDeleted()) mat.delete();
+                    });
+                });
+                
+                this.templates = {};
+                this.scaledTemplates = {};
+                this.isLoaded = false;
+                
+                PuzzleSolverApp.logger.debug('Template loader cleanup complete');
+            }
+        }
+
+        // ImageProcessor class - Phase 3.3.0
+        class ImageProcessor {
+            constructor() {
+                this.maxDimension = 1000;
+            }
+
+            async processImage(imageElement) {
+                if (!opencvManager.checkReady()) {
+                    throw new Error('OpenCV not ready');
+                }
+
+                PuzzleSolverApp.performance.start('imageProcessing');
+                
+                let originalMat = null;
+                let grayMat = null;
+                let resizedMat = null;
+                
+                try {
+                    // Convert image to Mat
+                    originalMat = cv.imread(imageElement);
+                    PuzzleSolverApp.logger.debug(`Image loaded: ${originalMat.cols}x${originalMat.rows}`);
+                    
+                    // Convert to grayscale
+                    grayMat = new cv.Mat();
+                    cv.cvtColor(originalMat, grayMat, cv.COLOR_RGBA2GRAY);
+                    PuzzleSolverApp.logger.debug('Converted to grayscale');
+                    
+                    // Resize if needed
+                    resizedMat = this.resizeImage(grayMat);
+                    
+                    // Cleanup - only delete what we're not returning
+                    if (originalMat && !originalMat.isDeleted()) {
+                        originalMat.delete();
+                    }
+                    
+                    // Only delete grayMat if we created a new resized version
+                    if (resizedMat !== grayMat && grayMat && !grayMat.isDeleted()) {
+                        grayMat.delete();
+                    }
+                    
+                    PuzzleSolverApp.performance.end('imageProcessing');
+                    PuzzleSolverApp.logger.debug(`Image processing complete: ${resizedMat.cols}x${resizedMat.rows}`);
+                    return resizedMat;
+                } catch (error) {
+                    // Cleanup on error
+                    if (originalMat && !originalMat.isDeleted()) originalMat.delete();
+                    if (grayMat && !grayMat.isDeleted()) grayMat.delete();
+                    if (resizedMat && resizedMat !== grayMat && !resizedMat.isDeleted()) resizedMat.delete();
+                    
+                    PuzzleSolverApp.performance.end('imageProcessing');
+                    throw error;
+                }
+            }
+
+            resizeImage(mat) {
+                const width = mat.cols;
+                const height = mat.rows;
+                
+                // Check if resize is needed
+                if (width <= this.maxDimension && height <= this.maxDimension) {
+                    return mat;
+                }
+                
+                // Calculate new dimensions preserving aspect ratio
+                const scale = Math.min(this.maxDimension / width, this.maxDimension / height);
+                const newWidth = Math.round(width * scale);
+                const newHeight = Math.round(height * scale);
+                
+                PuzzleSolverApp.logger.debug(`Resizing image from ${width}x${height} to ${newWidth}x${newHeight}`);
+                
+                const resized = new cv.Mat();
+                const dsize = new cv.Size(newWidth, newHeight);
+                cv.resize(mat, resized, dsize, 0, 0, cv.INTER_AREA);
+                
+                return resized;
+            }
+
+            canvasToMat(canvas) {
+                return cv.imread(canvas);
+            }
+
+            matToCanvas(mat, canvas) {
+                cv.imshow(canvas, mat);
+            }
+
+            cleanup(mat) {
+                try {
+                    if (mat && typeof mat.isDeleted === 'function' && !mat.isDeleted()) {
+                        mat.delete();
+                        PuzzleSolverApp.logger.debug('Cleaned up Mat successfully');
+                    }
+                } catch (error) {
+                    PuzzleSolverApp.logger.debug('Mat already cleaned up or invalid');
+                }
+            }
+        }
+
+        // ShapeDetector class - Phase 3.4.0
+        class ShapeDetector {
+            constructor() {
+                this.confidenceThreshold = 0.65;
+                this.overlapThreshold = 25; // pixels
+                this.detectedShapes = [];
+            }
+
+            async detectShapes(imageMat) {
+                if (!templateLoader.isLoaded) {
+                    throw new Error('Templates not loaded');
+                }
+
+                PuzzleSolverApp.performance.start('shapeDetection');
+                PuzzleSolverApp.logger.info('Starting shape detection');
+                
+                this.detectedShapes = [];
+                
+                try {
+                    // Detect each shape type
+                    const shapes = ['circle', 'star', 'cross', 'triangle', 'square'];
+                    
+                    for (let i = 0; i < shapes.length; i++) {
+                        const shapeName = shapes[i];
+                        const shapeId = i + 1; // Shape IDs are 1-5
+                        
+                        // Try multiple scales
+                        for (const scale of templateLoader.scales) {
+                            const template = templateLoader.getTemplate(shapeName, scale);
+                            const matches = this.matchTemplate(imageMat, template, shapeName, shapeId, scale);
+                            this.detectedShapes.push(...matches);
+                        }
+                    }
+                    
+                    // Remove overlapping detections
+                    this.removeOverlapping();
+                    
+                    PuzzleSolverApp.logger.info(`Detected ${this.detectedShapes.length} shapes`);
+                    PuzzleSolverApp.performance.end('shapeDetection');
+                    
+                    return this.detectedShapes;
+                } catch (error) {
+                    PuzzleSolverApp.performance.end('shapeDetection');
+                    throw error;
+                }
+            }
+
+            matchTemplate(imageMat, templateMat, shapeName, shapeId, scale) {
+                const matches = [];
+                
+                // Create result matrix
+                const result = new cv.Mat();
+                
+                try {
+                    // Perform template matching
+                    cv.matchTemplate(imageMat, templateMat, result, cv.TM_CCOEFF_NORMED);
+                    
+                    // Find all matches above threshold
+                    const threshold = this.confidenceThreshold;
+                    const locations = [];
+                    let maxConfidence = 0;
+                    let minConfidence = 1;
+                    
+                    // Scan through result matrix
+                    for (let y = 0; y < result.rows; y++) {
+                        for (let x = 0; x < result.cols; x++) {
+                            const confidence = result.floatAt(y, x);
+                            
+                            if (confidence > maxConfidence) maxConfidence = confidence;
+                            if (confidence < minConfidence) minConfidence = confidence;
+                            
+                            if (confidence >= threshold) {
+                                locations.push({
+                                    x: x,
+                                    y: y,
+                                    confidence: confidence,
+                                    shapeName: shapeName,
+                                    shapeId: shapeId,
+                                    scale: scale,
+                                    width: templateMat.cols,
+                                    height: templateMat.rows
+                                });
+                            }
+                        }
+                    }
+                    
+                    // Sort by confidence and take best matches
+                    locations.sort((a, b) => b.confidence - a.confidence);
+                    
+                    // Add to matches list
+                    const topMatches = locations.slice(0, 10); // Take top 10 matches per template
+                    matches.push(...topMatches);
+                    
+                    // Enhanced debug logging
+                    if (locations.length > 0) {
+                        PuzzleSolverApp.logger.debug(`${shapeName} @ scale ${scale}:`);
+                        PuzzleSolverApp.logger.debug(`  - Found ${locations.length} matches above ${threshold} threshold`);
+                        PuzzleSolverApp.logger.debug(`  - Confidence range: ${minConfidence.toFixed(3)} to ${maxConfidence.toFixed(3)}`);
+                        PuzzleSolverApp.logger.debug(`  - Top match: conf=${locations[0]?.confidence.toFixed(3)} at (${locations[0]?.x}, ${locations[0]?.y})`);
+                    }
+                } finally {
+                    if (result && !result.isDeleted()) {
+                        result.delete();
+                    }
+                }
+                
+                return matches;
+            }
+
+            removeOverlapping() {
+                const filtered = [];
+                
+                // Sort by confidence
+                this.detectedShapes.sort((a, b) => b.confidence - a.confidence);
+                
+                for (const shape of this.detectedShapes) {
+                    // Check if this shape overlaps with any already accepted shape
+                    let overlaps = false;
+                    
+                    for (const accepted of filtered) {
+                        const distance = Math.sqrt(
+                            Math.pow(shape.x - accepted.x, 2) + 
+                            Math.pow(shape.y - accepted.y, 2)
+                        );
+                        
+                        if (distance < this.overlapThreshold) {
+                            overlaps = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!overlaps) {
+                        filtered.push(shape);
+                    }
+                }
+                
+                this.detectedShapes = filtered;
+                PuzzleSolverApp.logger.debug(`Filtered to ${filtered.length} non-overlapping shapes`);
+            }
+
+            getDetections() {
+                return this.detectedShapes;
+            }
+        }
+
+        // GridMapper class - Phase 3.5.0
+        class GridMapper {
+            constructor() {
+                this.gridSize = 4; // Will be set dynamically
+                this.cellSpacing = 0;
+                this.gridOrigin = { x: 0, y: 0 };
+                this.grid = null;
+            }
+
+            mapToGrid(detections, requestedGridSize = null) {
+                if (!detections || detections.length === 0) {
+                    PuzzleSolverApp.logger.warn('No detections to map to grid');
+                    return this.createEmptyGrid(requestedGridSize || 4);
+                }
+
+                PuzzleSolverApp.logger.info(`Mapping ${detections.length} detections to grid`);
+                
+                // Use requested grid size or try to infer from detections
+                this.gridSize = requestedGridSize || this.inferGridSize(detections);
+                PuzzleSolverApp.logger.debug(`Grid size: ${this.gridSize}x${this.gridSize}`);
+                
+                // Calculate grid parameters
+                this.calculateGridParameters(detections);
+                
+                // Create grid array
+                this.grid = this.createEmptyGrid(this.gridSize);
+                
+                // Debug: Log all detection positions
+                PuzzleSolverApp.logger.debug('Detection positions:');
+                detections.forEach((det, i) => {
+                    PuzzleSolverApp.logger.debug(`  ${i}: ${det.shapeName} at (${det.x}, ${det.y}) conf=${det.confidence.toFixed(3)}`);
+                });
+                
+                // Map each detection to grid cell
+                const mappingLog = [];
+                for (const detection of detections) {
+                    const cell = this.snapToGrid(detection.x, detection.y);
+                    
+                    if (cell.row >= 0 && cell.row < this.gridSize && 
+                        cell.col >= 0 && cell.col < this.gridSize) {
+                        
+                        // Only update if empty or lower confidence
+                        if (this.grid[cell.row][cell.col] === 0) {
+                            this.grid[cell.row][cell.col] = detection.shapeId;
+                            mappingLog.push(`${detection.shapeName} (${detection.x},${detection.y}) -> cell[${cell.row}][${cell.col}]`);
+                        } else {
+                            mappingLog.push(`${detection.shapeName} (${detection.x},${detection.y}) -> cell[${cell.row}][${cell.col}] (OCCUPIED)`);
+                        }
+                    } else {
+                        mappingLog.push(`${detection.shapeName} (${detection.x},${detection.y}) -> OUT OF BOUNDS [${cell.row}][${cell.col}]`);
+                    }
+                }
+                
+                // Log mapping results
+                PuzzleSolverApp.logger.debug('Grid mapping results:');
+                mappingLog.forEach(log => PuzzleSolverApp.logger.debug(`  ${log}`));
+                
+                // Log final grid state
+                PuzzleSolverApp.logger.debug('Final grid:');
+                for (let row = 0; row < this.gridSize; row++) {
+                    const rowStr = this.grid[row].map(val => {
+                        const shapes = ['_', '●', '★', '+', '▲', '■'];
+                        return shapes[val] || '?';
+                    }).join(' ');
+                    PuzzleSolverApp.logger.debug(`  Row ${row}: ${rowStr}`);
+                }
+                
+                PuzzleSolverApp.logger.info('Grid mapping complete');
+                return this.grid;
+            }
+
+            inferGridSize(detections) {
+                // Try to infer grid size from number of detections
+                const count = detections.length;
+                
+                if (count <= 16) {
+                    return 4; // 4x4 grid
+                } else if (count <= 25) {
+                    return 5; // 5x5 grid
+                } else {
+                    return 4; // Default to 4x4
+                }
+            }
+
+            calculateGridParameters(detections) {
+                if (detections.length < 2) {
+                    // Not enough detections to calculate spacing
+                    this.cellSpacing = 80; // Default spacing
+                    this.gridOrigin = { x: detections[0]?.x || 0, y: detections[0]?.y || 0 };
+                    return;
+                }
+
+                // Find min and max positions
+                let minX = Infinity, minY = Infinity;
+                let maxX = -Infinity, maxY = -Infinity;
+                
+                for (const det of detections) {
+                    minX = Math.min(minX, det.x);
+                    minY = Math.min(minY, det.y);
+                    maxX = Math.max(maxX, det.x);
+                    maxY = Math.max(maxY, det.y);
+                }
+                
+                // Calculate average spacing
+                const horizontalSpacing = (maxX - minX) / (this.gridSize - 1);
+                const verticalSpacing = (maxY - minY) / (this.gridSize - 1);
+                
+                this.cellSpacing = Math.round((horizontalSpacing + verticalSpacing) / 2);
+                this.gridOrigin = { x: minX, y: minY };
+                
+                PuzzleSolverApp.logger.debug(`Grid parameters: origin=(${minX}, ${minY}), spacing=${this.cellSpacing}`);
+            }
+
+            snapToGrid(x, y) {
+                // Calculate which grid cell this position belongs to
+                const col = Math.round((x - this.gridOrigin.x) / this.cellSpacing);
+                const row = Math.round((y - this.gridOrigin.y) / this.cellSpacing);
+                
+                return { row, col };
+            }
+
+            createEmptyGrid(size) {
+                return Array(size).fill(null).map(() => Array(size).fill(0));
+            }
+
+            getGrid() {
+                return this.grid;
+            }
+
+            validateGrid() {
+                if (!this.grid) return false;
+                
+                // Check if grid has valid structure
+                if (this.grid.length !== this.gridSize) return false;
+                
+                for (const row of this.grid) {
+                    if (row.length !== this.gridSize) return false;
+                }
+                
+                return true;
+            }
+
+            displayGrid() {
+                // Update the UI grid with detected shapes
+                const gridElement = document.getElementById('puzzle-grid');
+                const cells = gridElement.querySelectorAll('.grid-cell');
+                
+                if (!this.grid) return;
+                
+                for (let row = 0; row < this.gridSize; row++) {
+                    for (let col = 0; col < this.gridSize; col++) {
+                        const cellIndex = row * this.gridSize + col;
+                        if (cells[cellIndex]) {
+                            const value = this.grid[row][col];
+                            PuzzleSolverApp.updateCell(cells[cellIndex], value);
+                        }
+                    }
+                }
+                
+                PuzzleSolverApp.state.currentGrid = this.grid;
+                PuzzleSolverApp.logger.info('Grid display updated');
+            }
+        }
+
+        // Initialize OpenCV components
+        const opencvManager = new OpenCVManager();
+        const templateLoader = new TemplateLoader();
+        const imageProcessor = new ImageProcessor();
+        const shapeDetector = new ShapeDetector();
+        const gridMapper = new GridMapper();
+
+        // Initialize handlers
+        const fileUploadHandler = new FileUploadHandler();
+        const dragDropHandler = new DragDropHandler();
+        const clipboardHandler = new ClipboardHandler();
+        const largeImageHandler = new LargeImageHandler();
+
+        // Wire up handlers to main app
+        PuzzleSolverApp.handleFileSelect = function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                fileUploadHandler.processFile(file);
+            }
+        };
+
+        PuzzleSolverApp.handleDragEnter = function(e) {
+            dragDropHandler.handleDragEnter(e);
+        };
+
+        PuzzleSolverApp.handleDragOver = function(e) {
+            dragDropHandler.handleDragOver(e);
+        };
+
+        PuzzleSolverApp.handleDragLeave = function(e) {
+            dragDropHandler.handleDragLeave(e);
+        };
+
+        PuzzleSolverApp.handleDrop = function(e) {
+            dragDropHandler.handleDrop(e);
+        };
+
+        PuzzleSolverApp.handlePaste = function(e) {
+            clipboardHandler.handlePaste(e);
+        };
+
+        // Add image processing pipeline to main app
+        PuzzleSolverApp.processUploadedImage = async function() {
+            if (!this.state.currentImage || !this.state.isOpenCvReady) {
+                this.logger.warn('Cannot process image: missing image or OpenCV not ready');
+                return;
+            }
+
+            try {
+                this.updateStatus('Processing image...', 'loading');
+                
+                // Get the preview image element
+                const preview = document.getElementById('preview-image');
+                
+                // Process the image
+                const processedMat = await imageProcessor.processImage(preview);
+                
+                // Detect shapes
+                const detections = await shapeDetector.detectShapes(processedMat);
+                
+                // Create visual debug overlay if in debug mode
+                if (this.config.debugMode) {
+                    this.createDebugOverlay(detections);
+                }
+                
+                // Map to grid
+                const gridSize = this.state.gridSize;
+                const grid = gridMapper.mapToGrid(detections, gridSize);
+                
+                // Display results
+                gridMapper.displayGrid();
+                
+                // Cleanup
+                imageProcessor.cleanup(processedMat);
+                
+                this.updateStatus('Detection complete');
+                this.showToast(`Detected ${detections.length} shapes`, 'success');
+                
+            } catch (error) {
+                this.handleError(error, 'processUploadedImage');
+            }
+        };
+
+        // Add detect shapes button handler
+        PuzzleSolverApp.detectShapes = function() {
+            this.processUploadedImage();
+        };
+
+        // Visual debug overlay function
+        PuzzleSolverApp.createDebugOverlay = function(detections) {
+            if (!this.config.debugMode) return;
+            
+            try {
+                const preview = document.getElementById('preview-image');
+                const imagePanel = document.getElementById('image-panel');
+                
+                // Remove existing overlay if any
+                const existingOverlay = document.getElementById('debug-overlay');
+                if (existingOverlay) existingOverlay.remove();
+                
+                // Create canvas overlay
+                const overlay = document.createElement('canvas');
+                overlay.id = 'debug-overlay';
+                overlay.style.position = 'absolute';
+                overlay.style.top = preview.offsetTop + 'px';
+                overlay.style.left = preview.offsetLeft + 'px';
+                overlay.style.pointerEvents = 'none';
+                overlay.style.zIndex = '1000';
+                overlay.width = preview.width;
+                overlay.height = preview.height;
+                
+                const ctx = overlay.getContext('2d');
+                
+                // Calculate scale factor
+                const scaleX = preview.width / preview.naturalWidth;
+                const scaleY = preview.height / preview.naturalHeight;
+                
+                // Draw detection rectangles
+                detections.forEach((det, i) => {
+                    const x = det.x * scaleX;
+                    const y = det.y * scaleY;
+                    const w = det.width * scaleX;
+                    const h = det.height * scaleY;
+                    
+                    // Choose color based on shape
+                    const colors = ['', '#FF0000', '#00FF00', '#0000FF', '#FF00FF', '#00FFFF'];
+                    ctx.strokeStyle = colors[det.shapeId] || '#FFFFFF';
+                    ctx.lineWidth = 2;
+                    
+                    // Draw rectangle
+                    ctx.strokeRect(x, y, w, h);
+                    
+                    // Draw label
+                    ctx.fillStyle = ctx.strokeStyle;
+                    ctx.font = '12px Arial';
+                    ctx.fillText(`${det.shapeName} (${det.confidence.toFixed(2)})`, x, y - 5);
+                    
+                    // Draw detection number
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(x, y, 20, 20);
+                    ctx.fillStyle = 'black';
+                    ctx.font = 'bold 14px Arial';
+                    ctx.fillText(i.toString(), x + 5, y + 15);
+                });
+                
+                imagePanel.appendChild(overlay);
+                this.logger.info('Debug overlay created with ' + detections.length + ' detections');
+            } catch (error) {
+                this.logger.error('Failed to create debug overlay: ' + error.message);
+            }
+        };
+
+        // OpenCV ready callback
+        function onOpenCvReady() {
+            opencvManager.onReady();
+        }
+
+        // Initialize app when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            PuzzleSolverApp.init();
+        });
+    </script>
+</body>
+</html>
